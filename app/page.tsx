@@ -12,7 +12,6 @@ type Conversation = {
   id: string;
   title: string;
   messages: Message[];
-  date: string;
 };
 
 type Usage = {
@@ -36,7 +35,7 @@ export default function Home() {
       const saved = localStorage.getItem("prey-chat-history");
       if (saved) setHistory(JSON.parse(saved));
     } catch {
-      console.error("Could not load chat history.");
+      console.error("History could not be loaded.");
     }
   }, []);
 
@@ -48,18 +47,18 @@ export default function Home() {
     if (!message.trim() || loading) return;
 
     const question = message.trim();
-    const updatedMessages: Message[] = [
+    const updated = [
       ...messages,
-      { role: "user", content: question },
+      { role: "user" as const, content: question },
     ];
 
-    setMessages(updatedMessages);
+    setMessages(updated);
     setMessage("");
     setLoading(true);
     setUsage(null);
     setResponseTime(null);
 
-    const startTime = Date.now();
+    const start = Date.now();
 
     try {
       const response = await fetch("/api/chat", {
@@ -75,20 +74,19 @@ export default function Home() {
       }
 
       const answer = data.answer || "No answer received.";
-      const finalMessages: Message[] = [
-        ...updatedMessages,
-        { role: "assistant", content: answer },
+      const finalMessages = [
+        ...updated,
+        { role: "assistant" as const, content: answer },
       ];
 
       setMessages(finalMessages);
       setUsage(data.usage || null);
-      setResponseTime((Date.now() - startTime) / 1000);
+      setResponseTime((Date.now() - start) / 1000);
 
-      const conversation: Conversation = {
+      const conversation = {
         id: Date.now().toString(),
         title: question.slice(0, 45),
         messages: finalMessages,
-        date: new Date().toLocaleString(),
       };
 
       setHistory((previous) => [
@@ -96,12 +94,13 @@ export default function Home() {
         ...previous.filter((item) => item.id !== conversation.id),
       ]);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred.";
-
       setMessages([
-        ...updatedMessages,
-        { role: "assistant", content: `Error: ${errorMessage}` },
+        ...updated,
+        {
+          role: "assistant",
+          content:
+            error instanceof Error ? error.message : "An error occurred.",
+        },
       ]);
     } finally {
       setLoading(false);
@@ -115,15 +114,15 @@ export default function Home() {
     setMessage("");
   }
 
-  function loadChat(conversation: Conversation) {
-    setMessages(conversation.messages);
+  function loadChat(chat: Conversation) {
+    setMessages(chat.messages);
     setUsage(null);
     setResponseTime(null);
   }
 
-  async function copyAnswer(text: string) {
+  async function copyAnswer(answer: string) {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(answer);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -138,13 +137,11 @@ export default function Home() {
   return (
     <main
       className={`relative min-h-screen overflow-hidden ${
-        lightMode
-          ? "bg-slate-100 text-slate-900"
-          : "bg-[#07152F] text-white"
+        lightMode ? "bg-slate-100 text-slate-900" : "bg-[#07152F] text-white"
       }`}
     >
       <div className="starfield" aria-hidden="true">
-        {Array.from({ length: 65 }, (_, i) => (
+        {Array.from({ length: 80 }, (_, i) => (
           <span
             key={i}
             className="star"
@@ -167,13 +164,13 @@ export default function Home() {
               PREY
             </h1>
             <p className="mt-1 text-xs tracking-wider text-slate-400">
-              INDEPENDENT AI LAB
+              AI LAB
             </p>
           </div>
 
           <button
             onClick={() => setLightMode(!lightMode)}
-            className="rounded-full border border-yellow-400/50 px-4 py-2 text-sm text-yellow-400 transition hover:bg-yellow-400 hover:text-[#07152F]"
+            className="rounded-full border border-yellow-400/50 px-4 py-2 text-sm text-yellow-400 hover:bg-yellow-400 hover:text-[#07152F]"
           >
             {lightMode ? "Dark Mode" : "Light Mode"}
           </button>
@@ -183,13 +180,13 @@ export default function Home() {
           <aside
             className={`h-fit rounded-2xl border p-4 ${
               lightMode
-                ? "border-slate-300 bg-white/80"
+                ? "border-slate-300 bg-white/90"
                 : "border-yellow-400/20 bg-[#102448]/80"
             }`}
           >
             <button
               onClick={newChat}
-              className="w-full rounded-xl bg-yellow-400 px-4 py-3 font-bold text-[#07152F] transition hover:bg-yellow-300"
+              className="w-full rounded-xl bg-yellow-400 px-4 py-3 font-bold text-[#07152F] hover:bg-yellow-300"
             >
               + New Chat
             </button>
@@ -209,7 +206,7 @@ export default function Home() {
                 <button
                   key={chat.id}
                   onClick={() => loadChat(chat)}
-                  className="w-full truncate rounded-lg bg-black/10 px-3 py-2 text-left text-sm transition hover:bg-yellow-400/10"
+                  className="w-full truncate rounded-lg bg-black/10 px-3 py-2 text-left text-sm hover:bg-yellow-400/10"
                 >
                   {chat.title}
                 </button>
@@ -220,10 +217,13 @@ export default function Home() {
           <section className="flex min-w-0 flex-col">
             <div className="mb-6 text-center">
               <h2 className="text-3xl font-bold sm:text-4xl">
-                Explore <span className="text-yellow-400">Intelligence</span>
+                Prey <span className="text-yellow-400">AI Lab</span>
               </h2>
               <p className="mt-3 text-sm text-slate-400">
-                Your independent AI playground powered by Fortytwo.
+                Your independent AI playground.
+              </p>
+              <p className="mt-2 text-xs font-semibold tracking-wider text-yellow-400">
+                Powered by Fortytwo
               </p>
             </div>
 
@@ -238,7 +238,7 @@ export default function Home() {
                 <div className="flex min-h-56 flex-col items-center justify-center text-center">
                   <div className="mb-4 text-5xl text-yellow-400">✦</div>
                   <h3 className="text-xl font-semibold">
-                    Welcome to Prey Mini Lab
+                    Welcome to Prey AI Lab
                   </h3>
                   <p className="mt-2 text-sm text-slate-400">
                     Ask a question and start exploring.
@@ -300,7 +300,7 @@ export default function Home() {
                 <button
                   onClick={askAI}
                   disabled={loading || !message.trim()}
-                  className="rounded-xl bg-yellow-400 px-6 py-3 font-bold text-[#07152F] transition hover:bg-yellow-300 disabled:opacity-40"
+                  className="rounded-xl bg-yellow-400 px-6 py-3 font-bold text-[#07152F] hover:bg-yellow-300 disabled:opacity-40"
                 >
                   {loading ? "Thinking..." : "Ask Fortytwo"}
                 </button>
@@ -348,8 +348,11 @@ export default function Home() {
           inset: 0;
           overflow: hidden;
           pointer-events: none;
-          background:
-            radial-gradient(ellipse at 50% 40%, rgba(20, 55, 105, 0.4), transparent 65%),
+          background: radial-gradient(
+              ellipse at 50% 40%,
+              rgba(20, 55, 105, 0.4),
+              transparent 65%
+            ),
             #07152f;
         }
 
@@ -376,7 +379,12 @@ export default function Home() {
           left: -15%;
           width: 120px;
           height: 2px;
-          background: linear-gradient(90deg, transparent, #f5c400, transparent);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            #f5c400,
+            transparent
+          );
           transform: rotate(-25deg);
           animation: shooting 9s linear infinite;
           animation-delay: 2s;
@@ -389,22 +397,45 @@ export default function Home() {
         }
 
         @keyframes twinkle {
-          from { opacity: 0.25; transform: scale(0.7); }
-          to { opacity: 1; transform: scale(1.4); }
+          from {
+            opacity: 0.25;
+            transform: scale(0.7);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1.4);
+          }
         }
 
         @keyframes shooting {
-          0% { left: -20%; opacity: 0; }
-          5% { opacity: 1; }
-          18% { left: 120%; opacity: 0; }
-          100% { left: 120%; opacity: 0; }
+          0% {
+            left: -20%;
+            opacity: 0;
+          }
+          5% {
+            opacity: 1;
+          }
+          18% {
+            left: 120%;
+            opacity: 0;
+          }
+          100% {
+            left: 120%;
+            opacity: 0;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .star, .shooting-star {
+          .star,
+          .shooting-star {
             animation: none;
           }
         }
+      `}</style>
+    </main>
+  );
+}
+
       `}</style>
     </main>
   );
