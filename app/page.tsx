@@ -53,22 +53,25 @@ export default function Home() {
           placeholder="Ask anything..."
           className="w-full h-40 rounded-xl bg-zinc-900 border border-zinc-700 p-4 outline-none focus:border-white"
         />
+<button
+  onClick={askAI}
+  disabled={loading || !message.trim()}
+  className="w-full rounded-xl bg-white text-black p-4 font-semibold disabled:opacity-40"
+>
+  {loading ? "Thinking..." : "Ask Fortytwo"}
+</button>
 
-        <button
-          onClick={askAI}
-          disabled={loading || !message.trim()}
-          className="w-full rounded-xl bg-white text-black p-4 font-semibold disabled:opacity-40"
-        >
-          {loading ? "Thinking..." : "Ask Fortytwo"}
-        </button>
+{answer && (
+  <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5 whitespace-pre-wrap">
+    <h2 className="font-semibold mb-3">AI Response</h2>
+    {answer}
+  </div>
+)}
 
-        {answer && (
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-5 whitespace-pre-wrap">
-            <h2 className="font-semibold mb-3">AI Response</h2>
-            {answer}
-          </div>
-        )}
-      </div>
-    </main>
-  );
+<p className="text-center text-xs text-zinc-500 pt-4">
+  Created by @preywebthree
+</p>
+</div>
+</main>
+);
 }
