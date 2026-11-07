@@ -1,10 +1,41 @@
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export async function POST(request: Request) {
   try {
-    const { message } = await request.json();
+    const body = await request.json();
+    const incoming = Array.isArray(body.messages)
+      ? body.messages
+      : typeof body.message === "string"
+        ? [{ role: "user", content: body.message }]
+        : [];
 
-    if (!message || typeof message !== "string") {
+    if (
+      incoming.length === 0 ||
+      incoming.length > 30 ||
+      incoming.some(
+        (item: unknown) =>
+          !item ||
+          typeof item !== "object" ||
+          !("role" in item) ||
+          !("content" in item) ||
+          !["user", "assistant"].includes(String(item.role)) ||
+          typeof item.content !== "string" ||
+          item.content.length > 20000
+      )
+    ) {
       return Response.json(
-        { error: "Please enter a message." },
+        { error: "Please provide a valid conversation (up to 30 messages)." },
+        { status: 400 }
+      );
+    }
+
+    const messages = incoming as ChatMessage[];
+    if (messages[messages.length - 1]?.role !== "user") {
+      return Response.json(
+        { error: "The latest message must be from the user." },
         { status: 400 }
       );
     }
@@ -28,7 +59,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model: "qwen/qwen3.8-27b",
-          messages: [{ role: "user", content: message }],
+          messages,
         }),
       }
     );
@@ -45,6 +76,7 @@ export async function POST(request: Request) {
     return Response.json({
       answer: data.choices?.[0]?.message?.content,
       usage: data.usage,
+      model: data.model || "qwen/qwen3.8-27b",
     });
   } catch {
     return Response.json(
