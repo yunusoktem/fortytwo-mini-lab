@@ -21,7 +21,8 @@ function dbConfig() {
 async function dbRequest(userId: string, method: "GET" | "POST", body?: object) {
   const db = dbConfig();
   if (!db) return null;
-  const response = await fetch(db.url + "/rest/v1/prey_user_memory?user_id=eq." + userId, {
+  const endpoint = method === "POST" ? db.url + "/rest/v1/prey_user_memory?on_conflict=user_id" : db.url + "/rest/v1/prey_user_memory?user_id=eq." + userId;
+  const response = await fetch(endpoint, {
     method,
     headers: { apikey: db.key, Authorization: "Bearer " + db.key, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=representation" },
     ...(body ? { body: JSON.stringify(body) } : {}),
