@@ -29,6 +29,21 @@ export default function Home() {
   const [responseTime, setResponseTime] = useState<number | null>(null);
   const [lightMode, setLightMode] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [guestId, setGuestId] = useState("");
+  const [memoryStatus, setMemoryStatus] = useState("Connecting guest memory...");
+
+  useEffect(() => {
+    let id = localStorage.getItem("prey-guest-id");
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem("prey-guest-id", id);
+    }
+    setGuestId(id);
+    fetch(`/api/memory?deviceId=${id}`)
+      .then((response) => response.json())
+      .then((data) => setMemoryStatus(data.enabled ? "Guest memory connected" : "Guest memory needs database setup"))
+      .catch(() => setMemoryStatus("Guest memory unavailable"));
+  }, []);
 
   useEffect(() => {
     try {
@@ -64,7 +79,7 @@ export default function Home() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: updated }),
+        body: JSON.stringify({ messages: updated, deviceId: guestId }),
       });
 
       const data = await response.json();
@@ -81,6 +96,7 @@ export default function Home() {
 
       setMessages(finalMessages);
       setUsage(data.usage || null);
+      setMemoryStatus(data.memoryEnabled ? `Guest memory active · ${data.memoryTurnCount} saved turns` : "Guest memory needs database setup");
       setResponseTime((Date.now() - start) / 1000);
 
       const conversation = {
@@ -191,6 +207,26 @@ export default function Home() {
               + New Chat
             </button>
 
+            <div className="mt-5 rounded-lg border border-yellow-400/20 p-3 text-xs text-slate-300">
+              <p className="font-semibold text-yellow-400">Guest Memory</p>
+              <p className="mt-1">{memoryStatus}</p>
+              <button
+                onClick={async () => {
+                  if (!guestId || !window.confirm("Delete this browser's saved Prey memory?")) return;
+                  const response = await fetch("/api/memory", {
+                    method: "DELETE",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ deviceId: guestId }),
+                  });
+                  if (response.ok) setMemoryStatus("Guest memory deleted");
+                  else setMemoryStatus("Could not delete guest memory");
+                }}
+                className="mt-2 text-yellow-400 underline underline-offset-2"
+              >
+                Delete saved memory
+              </button>
+            </div>
+
             <h2 className="mb-3 mt-6 text-xs font-bold uppercase tracking-widest text-yellow-500">
               Chat History
             </h2>
@@ -299,7 +335,7 @@ export default function Home() {
                 </p>
                 <button
                   onClick={askAI}
-                  disabled={loading || !message.trim()}
+                  disabled={loading || !message.trim() || !guestId}
                   className="rounded-xl bg-yellow-400 px-6 py-3 font-bold text-[#07152F] hover:bg-yellow-300 disabled:opacity-40"
                 >
                   {loading ? "Thinking..." : "Ask Fortytwo"}
